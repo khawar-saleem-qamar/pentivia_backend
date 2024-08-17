@@ -19,14 +19,15 @@ const godaddyEmail = process.env.EMAIL;
 const godaddyPassword = process.env.PASSWORD;
 
 const mailTransport = nodemailer.createTransport({
-  host: "smtp.office365.com",
-  port: 587,
+  // host: "smtp.office365.com",
+  // port: 587,
+  service: "gmail",
   auth: {
     user: godaddyEmail,
-    pass: godaddyPassword,
-  },
-  secureConnection: true,
-  tls: { ciphers: "SSLv3" },
+    pass: godaddyPassword
+  }
+  // secureConnection: true,
+  // tls: { ciphers: "SSLv3" },
 });
 
 const createToken = (id) => {
@@ -108,7 +109,7 @@ const signupUser = async (req, res) => {
       averageTyping
     });
 
-    await sendMail(otp, firstname, lastname, email, "SignUp");
+    await sendMail(otp, username, email, "SignUp");
 
     sendRes(res, 200, true, "SignUp Pending. OTP Sent");
   } catch (error) {
@@ -132,8 +133,8 @@ const verifyOTP = async (req, res) => {
       const averageTyping = otpDoc.averageTyping;
       const user = await User.create({
         username,
-        dob,
-        phone,
+        firstname,
+        lastname,
         email,
         password,
         averageTyping
@@ -324,9 +325,11 @@ async function sendMail(otp, username, email, type) {
       from: godaddyEmail,
       to: email,
       subject: `Pentivia OTP for ${type}`,
-      text: `Dear ${username},
+      html: `Dear ${username},
             
-Your One-Time Password (OTP) for ${type} is ${otp}. Do not share with anyone.
+Your One-Time Password (OTP) for ${type} is:
+<h1>${otp}</h1>
+Do not share with anyone.
 
 This OTP will expire in 10 minutes!
           
