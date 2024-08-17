@@ -36,8 +36,8 @@ app.use(express.json());
 
 // #region Routes
 // const nameRoutes = require("./routes/nameRoutes");
-const userRoutes = require("./routes/userRoutes");
-app.use("/user", userRoutes);
+// const userRoutes = require("./routes/userRoutes");
+// app.use("/user", userRoutes);
 const authRoutes = require("./routes/authRoutes");
 app.use("/auth", authRoutes);
 

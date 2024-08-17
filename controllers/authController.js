@@ -1,14 +1,12 @@
 const User = require("../models/userModel");
 const Wallet = require("../models/walletModel");
 const UnderSignup = require("../models/underSignupModel");
-const {is} = require("../helpers/otherHelpers")
+const {is, sendRes} = require("../helpers/otherHelpers")
 
-const Otp = require("../models/otpModel");
 const nodemailer = require("nodemailer");
 
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
-const axios = require("axios");
 const crypto = require("crypto");
 const qs = require("querystring");
 
@@ -16,7 +14,6 @@ const qs = require("querystring");
 
 require("dotenv").config();
 
-const randomName = (bytes = 32) => crypto.randomBytes(bytes).toString("hex");
 
 const godaddyEmail = process.env.EMAIL;
 const godaddyPassword = process.env.PASSWORD;
@@ -40,112 +37,82 @@ const loginUser = async (req, res) => {
   const { email, password } = req.body;
   try {
     if (!email || !password) {
-      throw Error("All Fields must be filled");
+      sendRes(res, 400, false, "All Fields must be filled");
+      return;
     }
-    const user = await User.findOne({ email });
+    var user = await User.findOne({ email });
 
     if (!user) {
-      throw Error("User Not Found");
+      user = await User.findOne({ username: email });
     }
 
+    if (!user) {
+      sendRes(res, 400, false, "Incorrect usename or password");
+      return;
+    }
+
+
     if (!user.password) {
-      throw Error("Please complete your signup");
+      sendRes(res, 400, false, "Please complete your signup first!");
+      return;
     }
 
     const token = createToken(user._id);
     const match = await bcrypt.compare(password, user.password);
     if (!match) {
-      throw Error("Incorrect Password");
+      sendRes(res, 400, false, "Incorrect usename or password");
+      return;
     }
 
     const userObject = user.toObject();
     delete userObject.password;
 
     url = user.profilePic
-    res.status(200).json({ user: userObject, token, url });
+    sendRes(res, 200, true, { user: userObject, token, url });
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    sendRes(res, 400, false, error.message);
   }
 };
   
 const signupUser = async (req, res) => {
-  const { username, phone, dob, email, password, signupid } = req.body;
+  const { username, firstname, lastname, email, password, averageTyping } = req.body;
 
   try {
-    if(email && email.trim() != "" && !password){
-      var underSignup = await UnderSignup.findById(signupid);
-      if(!underSignup){
-        throw Error("Invalid signup")
-      }
-      const existsEmail = await User.findOne({ email });
-  
-      if (existsEmail) {
-        throw Error("Email already in use");
-      }
+    const existsEmail = await User.findOne({ email });
+    const existsUsername = await User.findOne({ username });
 
-      const otp = OTP();
-      const otpDoc = await UnderSignup.findOne({ email });
-      if (otpDoc) {
-        await otpDoc.deleteOne();
-      }
-
-      // await sendMail(otp, underSignup.username, email);
-
-      await underSignup.updateOne({
-        email,
-        otp
-      })
-
-      res.status(200).json({
-        message: "SignUp Pending. OTP Sent",
-      });
-    }else if(email && email.trim() != "" && password && password.trim() != ""){
-      var user = await User.findOne({email});
-      if(!user){
-        throw Error("Invalid email")
-      }
-
-      const salt = await bcrypt.genSalt(10);
-      const hashed = await bcrypt.hash(password, salt);
-
-      await user.updateOne({
-        password: hashed
-      })
-
-      res.status(200).json({
-        message: "SignUp successful",
-      });
-    }else{
-      if(username && phone && dob){
-
-        const existsUsername = await User.findOne({ username });
-  
-        if (existsUsername) {
-          throw Error("Username already in use");
-        }
-
-        const existsPhone = await User.findOne({ phone });
-  
-        if (existsPhone) {
-          throw Error("Phone already in use");
-        }
-        var underSignup = await UnderSignup.create({
-          username, 
-          phone, 
-          dob: dob
-        })
-
-        res.status(200).json({
-          signupid: underSignup._id,
-        });
-      }else{
-        res.staus(400).json({
-          error: "Please provide username, phone & dob"
-        })
-      }
+    if (existsEmail) {
+      sendRes(res, 400, false, "Email already in use");
+      return;
     }
+    if (existsUsername) {
+      sendRes(res, 400, false, "Username unavailable");
+      return;
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashed = await bcrypt.hash(password, salt);
+
+    const otp = OTP();
+    const otpDoc = await UnderSignup.findOne({ email });
+    if (otpDoc) {
+      await otpDoc.deleteOne();
+    }
+    await UnderSignup.create({
+      email,
+      username,
+      firstname,
+      lastname,
+      password: hashed,
+      otp,
+      averageTyping
+    });
+
+    await sendMail(otp, firstname, lastname, email, "SignUp");
+
+    sendRes(res, 200, true, "SignUp Pending. OTP Sent");
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    sendRes(res, 400, false, error.message );
   }
 };
 
@@ -158,43 +125,36 @@ const verifyOTP = async (req, res) => {
 
     if (otpDoc.otp == otp) {
       const username = otpDoc.username;
-      const phone = otpDoc.phone;
-      const dob = otpDoc.dob;
+      const firstname = otpDoc.firstname;
+      const lastname = otpDoc.lastname;
       const email = otpDoc.email;
       const password = otpDoc.password;
+      const averageTyping = otpDoc.averageTyping;
       const user = await User.create({
         username,
         dob,
         phone,
         email,
         password,
+        averageTyping
       });
       const wallet = await Wallet.create({ userid: user._id });
       await user.updateOne({
         walletid: wallet._id,
       });
-      if(!user.signupStatus.includes("fresh")){
-        await user.updateOne({
-          $push: {
-            signupStatus: "fresh"
-          }
-        });
-      }
       await otpDoc.deleteOne();
-      res.status(200).json({
-        message: "Sign Up Successfull",
-      });
+      sendRes(res, 200, true, "Sign Up Successfull");
     } else {
-      throw Error("Otp Verification Failed");
+      sendRes(res, 400, false, "Otp Verification Failed");
     }
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    sendRes(res, 400, false, error.message );
   }
 };
 
 function OTP() {
-  const min = 100000; // Minimum 6-digit number
-  const max = 999999; // Maximum 6-digit number
+  const min = 1000; // Minimum 4-digit number
+  const max = 9999; // Maximum 4-digit number
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
@@ -204,7 +164,7 @@ const resendOTP = async (req, res) => {
     const otpDoc = await UnderSignup.findOne({ email });
 
     if (!otpDoc) {
-      throw Error("Sign Up Again");
+      sendRes(res, 400, false, "Sign Up Again");
     }
 
     const otp = OTP();
@@ -215,13 +175,11 @@ const resendOTP = async (req, res) => {
 
     // const username = otpDoc.username;
 
-    // await sendMail(otp, username, email);
+    await sendMail(otp, username, email, "SignUp");
 
-    res.status(200).json({
-      message: "OTP Resent",
-    });
+    sendRes(res, 200, true, "OTP Resent");
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    sendRes(res, 400, false, error.message );
   }
 }
 
@@ -230,22 +188,18 @@ const resetPasswordRequest = async (req, res) => {
     const email = req.body.email;
     const user = await User.findOne({ email });
     if (!user) {
-      throw Error("User Not Found");
+      sendRes(res, 400, false, "Email not found");
     }
 
     const otp = OTP();
 
     await UnderSignup.create({ email, otp });
 
-    // await sendMail(otp, user.username, email);
+    await sendMail(otp, user.username, email, "password reset");
 
-    res.status(200).json({
-      message: "Verification Pending. OTP Sent",
-    });
+    sendRes(res, 200, true, "Verification Pending. OTP Sent");
   } catch (error) {
-    res.status(400).json({
-      error: error.message,
-    });
+    sendRes(res, 400, false, error.message);
   }
 }
 
@@ -256,24 +210,18 @@ const verifyPasswordOtp = async (req, res) => {
 
     const user = await User.findOne({ email });
     if (!user) {
-      throw Error("User Not Found");
+      sendRes(res, 400, false, "User Not Found");
     }
 
     const otpDocument = await UnderSignup.findOne({ email, otp });
 
     if (otpDocument) {
-      res.status(200).json({
-        success: true,
-        message: "Verification Successful",
-      });
+      sendRes(res, 200, true, "Verification Successful");
     } else {
-      res.status(400).json({
-        success: false,
-        message: "Verification Failed",
-      });
+      sendRes(res, 400, false, "Verification Failed");
     }
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    sendRes(res, 400, false, error.message );
   }
 }
 
@@ -282,7 +230,7 @@ const newPassword = async (req, res) => {
     const email = req.body.email;
     const user = await User.findOne({ email });
     if (!user) {
-      throw Error("User Not Found");
+      sendRes(res, 400, false, "User Not Found");
     }
     const newpassword = req.body.newpassword;
     const salt = await bcrypt.genSalt(10);
@@ -290,11 +238,9 @@ const newPassword = async (req, res) => {
     await user.updateOne({
       password: hashed,
     });
-    res.status(200).json({
-      message: "Password Reset",
-    });
+    sendRes(res, 200, true, "Password Reset");
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    sendRes(res, 400, false, error.message );
   }
 }
 
@@ -304,7 +250,7 @@ const resendPasswordOTP = async (req, res) => {
     const otpDoc = await UnderSignup.findOne({ email });
 
     if (!otpDoc) {
-      throw Error("Request Change Password Again");
+      sendRes(res, 400, false, "Request Change Password Again");
     }
 
     const otp = OTP();
@@ -320,13 +266,11 @@ const resendPasswordOTP = async (req, res) => {
     //   username = user.username;
     // }
 
-    // await sendMail(otp, username, email);
+    await sendMail(otp, username, email, "password reset");
 
-    res.status(200).json({
-      message: "OTP Resent",
-    });
+    sendRes(res, 200, true, "OTP Resent");
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    sendRes(res, 400, false, error.message );
   }
 }
 
@@ -336,7 +280,7 @@ const setFcmToken = async (req, res) => {
     const user = await User.findById(userid);
 
     if (!user) {
-      throw Error("User Not Found");
+      sendRes(res, 400, false, "User Not Found");
     }
 
     if (!user.fcmtoken.includes(fcmtoken)) {
@@ -345,13 +289,9 @@ const setFcmToken = async (req, res) => {
       });
     }
 
-    res.status(200).json({
-      message: "Token Added",
-    });
+    sendRes(res, 200, true, "Token Added");
   } catch (error) {
-    res.status(400).json({
-      error: error.message,
-    });
+    sendRes(res, 400, false, error.messages);
   }
 };
 
@@ -361,7 +301,7 @@ const deleteFcmToken = async (req, res) => {
     const user = await User.findById(userid);
 
     if (!user) {
-      throw Error("User Not Found");
+      sendRes(res, 400, false, "User Not Found");
     }
 
     if (user.fcmtoken.includes(fcmtoken)) {
@@ -370,9 +310,7 @@ const deleteFcmToken = async (req, res) => {
       });
     }
 
-    res.status(200).json({
-      message: "Token Deleted",
-    });
+    sendRes(res, 200, true, "Token Deleted");
   } catch (error) {
     res.status(400).json({
       error: error.message,
@@ -380,24 +318,26 @@ const deleteFcmToken = async (req, res) => {
   }
 };
 
-// async function sendMail(otp, username, email) {
-//   try {
-//     const mailOptions = {
-//       from: godaddyEmail,
-//       to: email,
-//       subject: "imFact OTP for SignUp",
-//       text: `Dear ${username},
+async function sendMail(otp, username, email, type) {
+  try {
+    const mailOptions = {
+      from: godaddyEmail,
+      to: email,
+      subject: `Pentivia OTP for ${type}`,
+      text: `Dear ${username},
             
-// Your One-Time Password (OTP) for SignUp is ${otp}. Do not share with anyone.
-          
-// Team inFact`,
-//     };
+Your One-Time Password (OTP) for ${type} is ${otp}. Do not share with anyone.
 
-//     await mailTransport.sendMail(mailOptions);
-//   } catch (err) {
-//     console.error(err);
-//   }
-// }
+This OTP will expire in 10 minutes!
+          
+Team Pentivia`,
+    };
+
+    await mailTransport.sendMail(mailOptions);
+  } catch (err) {
+    console.error(err);
+  }
+}
 
 module.exports = {
   signupUser,
