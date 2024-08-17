@@ -76,7 +76,7 @@ const loginUser = async (req, res) => {
 };
   
 const signupUser = async (req, res) => {
-  const { username, firstname, lastname, email, password, averageTyping } = req.body;
+  const { username, email, password, averageTyping } = req.body;
 
   try {
     const existsEmail = await User.findOne({ email });
@@ -90,6 +90,7 @@ const signupUser = async (req, res) => {
       sendRes(res, 400, false, "Username unavailable");
       return;
     }
+    
 
     const salt = await bcrypt.genSalt(10);
     const hashed = await bcrypt.hash(password, salt);
@@ -102,8 +103,6 @@ const signupUser = async (req, res) => {
     await UnderSignup.create({
       email,
       username,
-      firstname,
-      lastname,
       password: hashed,
       otp,
       averageTyping
@@ -126,15 +125,11 @@ const verifyOTP = async (req, res) => {
 
     if (otpDoc.otp == otp) {
       const username = otpDoc.username;
-      const firstname = otpDoc.firstname;
-      const lastname = otpDoc.lastname;
       const email = otpDoc.email;
       const password = otpDoc.password;
       const averageTyping = otpDoc.averageTyping;
       const user = await User.create({
         username,
-        firstname,
-        lastname,
         email,
         password,
         averageTyping
@@ -174,7 +169,7 @@ const resendOTP = async (req, res) => {
       otp,
     });
 
-    // const username = otpDoc.username;
+    const username = otpDoc.username;
 
     await sendMail(otp, username, email, "SignUp");
 
@@ -190,9 +185,14 @@ const resetPasswordRequest = async (req, res) => {
     const user = await User.findOne({ email });
     if (!user) {
       sendRes(res, 400, false, "Email not found");
+      return;
     }
 
     const otp = OTP();
+    var prevOtp = await UnderSignup.findOne({email});
+    if(prevOtp){
+      await prevOtp.deleteOne();
+    }
 
     await UnderSignup.create({ email, otp });
 
@@ -217,6 +217,7 @@ const verifyPasswordOtp = async (req, res) => {
     const otpDocument = await UnderSignup.findOne({ email, otp });
 
     if (otpDocument) {
+      await otpDocument.deleteOne();
       sendRes(res, 200, true, "Verification Successful");
     } else {
       sendRes(res, 400, false, "Verification Failed");
@@ -251,23 +252,28 @@ const resendPasswordOTP = async (req, res) => {
     const otpDoc = await UnderSignup.findOne({ email });
 
     if (!otpDoc) {
-      sendRes(res, 400, false, "Request Change Password Again");
+      sendRes(res, 400, false, "Try resetting again");
+      return;
     }
-
+    
     const otp = OTP();
-
+    
     await otpDoc.updateOne({
       otp,
     });
-
+    
     const user = await User.findOne({ email });
+    if(!user){
+      sendRes(res, 400, false, "Account not found");
+      return;
+    }
     // let username;
 
     // if (user) {
     //   username = user.username;
     // }
 
-    await sendMail(otp, username, email, "password reset");
+    await sendMail(otp, user.username, email, "password reset");
 
     sendRes(res, 200, true, "OTP Resent");
   } catch (error) {
