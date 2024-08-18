@@ -67,8 +67,11 @@ const loginUser = async (req, res) => {
 
     const userObject = user.toObject();
     delete userObject.password;
-
     url = user.profilePic
+
+    userObject["token"] = token;
+    userObject["url"] = url
+
     sendRes(res, 200, true, { user: userObject, token, url });
   } catch (error) {
     sendRes(res, 400, false, error.message);

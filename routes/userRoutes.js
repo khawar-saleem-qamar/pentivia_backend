@@ -14,24 +14,13 @@ const {
     deleteUser,
     deleteUserByUsername,
     generateShareableProfileLink,
-    resetPasswordRequest,
-    verifyPasswordOtp,
-    newPassword,
     searchUsers,
-    changePassword,
     getAllUsers,
-    setUserInfo,
-    setUserBank,
-    setUserBusiness,
-    setAutomaticOptions,
-    createCustomer,
     getUserProfile,
-    switchRole
+    setTestStarted,
+    setTestEnded
 } = require("../controllers/userController")
 
-router.patch("/resetPasswordRequest",resetPasswordRequest)
-router.patch("/verifyPasswordOtp",verifyPasswordOtp)
-router.patch("/newPassword",newPassword)
 
 const requireAuth = require("../middleware/requireAuth")
 router.use(requireAuth)
@@ -44,16 +33,8 @@ router.get("/searchUsers", searchUsers)
 
 router.get("/getProfilePic/:userid", getProfilePic)
 router.patch("/setProfilePic", upload.single("image"), setProfilePic)
-router.patch("/setUserInfo", setUserInfo)
-router.patch("/setUserBank", setUserBank)
-router.patch("/setUserBusiness", setUserBusiness)
-router.patch("/setAutomaticOptions",setAutomaticOptions)
-router.patch("/switchRole",switchRole)
-
-
-
-router.patch("/changePassword",changePassword)
-router.patch("/createCustomer", upload.single("image"),createCustomer)
+router.patch("/setTestStarted", setTestStarted);
+router.patch("/setTestEnded", setTestEnded);
 
 
 router.delete("/deleteUser", deleteUser);

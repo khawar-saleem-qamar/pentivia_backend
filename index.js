@@ -40,6 +40,10 @@ app.use(express.json());
 // app.use("/user", userRoutes);
 const authRoutes = require("./routes/authRoutes");
 app.use("/auth", authRoutes);
+const userRoutes = require("./routes/userRoutes");
+app.use("/user", userRoutes);
+const typingRoutes = require("./routes/typingRoutes");
+app.use("/typing", typingRoutes);
 
 
 app.use("/", (req, res) => {

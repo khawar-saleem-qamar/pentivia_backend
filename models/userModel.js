@@ -35,6 +35,9 @@ const userSchema = new mongoose.Schema({
   tiktok:{type: String, default: "" },
   facebook:{type: String, default: "" },
   fcmtoken: [{ type: String, default: [] }],
+  testStarted: {type: Number, default: 0},
+  testEnded: {type: Number, default: 0},
+  typedSeconds: {type: Number, default: 0}
   // appleId: { type: String },
   // about: { type: String, default: "" },
   // profilePicture: { type: String, default: "" },
