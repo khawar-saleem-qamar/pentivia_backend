@@ -8,7 +8,6 @@ const crypto = require("crypto");
 const http = require("http");
 const axios = require("axios")
 const fs = require("fs")
-
 // #endregion Imports:packages
 
 // #region Imports:local
@@ -28,7 +27,9 @@ const multer = require('multer')
 const storage = multer.memoryStorage()
 const upload = multer({storage:storage})
 const server = http.createServer(app);
-app.use(express.static("public"));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// app.use(express.static("uploads"));
+console.log(path.join(__dirname, 'uploads'))
 app.use(cors());
 app.use(express.json());
 

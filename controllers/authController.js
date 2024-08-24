@@ -2,12 +2,15 @@ const User = require("../models/userModel");
 const Wallet = require("../models/walletModel");
 const UnderSignup = require("../models/underSignupModel");
 const {is, sendRes} = require("../helpers/otherHelpers")
+const crypto = require("crypto");
+const fs = require("fs")
+const path = require("path");
+const {createCanvas} = require("canvas")
 
 const nodemailer = require("nodemailer");
 
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
-const crypto = require("crypto");
 const qs = require("querystring");
 
 
@@ -67,9 +70,10 @@ const loginUser = async (req, res) => {
 
     const userObject = user.toObject();
     delete userObject.password;
-    url = user.profilePic
+    url =  `${req.protocol}://${req.get('host')}/uploads/${user.profilePic}`
 
     userObject["token"] = token;
+    userObject["profilePic"] = url
     userObject["url"] = url
 
     sendRes(res, 200, true, { user: userObject, token, url });
@@ -131,11 +135,20 @@ const verifyOTP = async (req, res) => {
       const email = otpDoc.email;
       const password = otpDoc.password;
       const averageTyping = otpDoc.averageTyping;
+
+      const avatarBuffer = generateRandomAvatar();
+
+      var randomName = (bytes = 32) => crypto.randomBytes(bytes).toString("hex");
+      var fileName = randomName();
+      const avatarPath = path.join(__dirname, '../uploads/profilePictures/default', `${fileName}.png`);
+      fs.writeFileSync(avatarPath, avatarBuffer);
+
       const user = await User.create({
         username,
         email,
         password,
-        averageTyping
+        averageTyping,
+        profilePic: `profilePictures/default/${fileName}.png`
       });
       const wallet = await Wallet.create({ userid: user._id });
       await user.updateOne({
@@ -349,6 +362,33 @@ Team Pentivia`,
   } catch (err) {
     console.error(err);
   }
+}
+
+function getRandomColor() {
+  const letters = '0123456789ABCDEF';
+  let color = '#';
+  for (let i = 0; i < 6; i++) {
+      color += letters[Math.floor(Math.random() * 16)];
+  }
+  return color;
+}
+
+function generateRandomAvatar() {
+  const size = 100;
+  const canvas = createCanvas(size, size);
+  const ctx = canvas.getContext('2d');
+
+  ctx.fillStyle = getRandomColor();
+  ctx.fillRect(0, 0, size, size);
+
+  for (let i = 0; i < 15; i++) {
+      ctx.fillStyle = getRandomColor();
+      ctx.beginPath();
+      ctx.arc(Math.random() * size, Math.random() * size, Math.random() * size / 4, 0, 2 * Math.PI);
+      ctx.fill();
+  }
+
+  return canvas.toBuffer();
 }
 
 module.exports = {
