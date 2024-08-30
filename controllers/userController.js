@@ -250,6 +250,7 @@ const deleteUserByUsername = async (req, res) => {
       var user = await User.findById(userid);
       if(!user){
         sendRes(res, 400, false, "User not found");
+        return;
       }
   
       await user.updateOne({
@@ -269,6 +270,7 @@ const deleteUserByUsername = async (req, res) => {
       var user = await User.findById(userid);
       if(!user){
         sendRes(res, 400, false, "User not found");
+        return;
       }
   
       await user.updateOne({

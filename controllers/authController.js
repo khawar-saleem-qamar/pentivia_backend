@@ -373,23 +373,70 @@ function getRandomColor() {
   return color;
 }
 
+function testRadomImge(){
+  const avatarBuffer = generateRandomAvatar();
+
+  var randomName = (bytes = 32) => crypto.randomBytes(bytes).toString("hex");
+  var fileName = randomName();
+  const avatarPath = path.join(__dirname, '../uploads/profilePictures/default/test', `${fileName}.png`);
+  fs.writeFileSync(avatarPath, avatarBuffer);
+}
+
 function generateRandomAvatar() {
   const size = 100;
   const canvas = createCanvas(size, size);
   const ctx = canvas.getContext('2d');
 
-  ctx.fillStyle = getRandomColor();
+  // Set the background color to white
+  ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, size, size);
 
-  for (let i = 0; i < 15; i++) {
-      ctx.fillStyle = getRandomColor();
-      ctx.beginPath();
-      ctx.arc(Math.random() * size, Math.random() * size, Math.random() * size / 4, 0, 2 * Math.PI);
-      ctx.fill();
+  const slice = 10; // 5 rows
+  const colSlice = 10;
+  const boxSize = size / slice;
+
+  // Generate one foreground and one background color for the entire image
+  const forGround = getRandomColor();
+  const backGround = getRandomColor();
+  const backGroundRatio = 2;
+
+  for (let row = 0; row < slice; row++) {
+    // Create an array to represent the row and fill it with the foreground color
+    let rowColors = Array(slice).fill(forGround);
+    let backGroundIndices = [];
+
+    // Randomly assign background color to 'backGroundRatio' number of boxes in the row
+    if(row > 0 && row < slice -1 )
+    while (backGroundIndices.length < backGroundRatio) {
+      let randomIndex = Math.floor(Math.random() * slice);
+      
+      // Ensure the index is not already chosen and not consecutive to another background color
+      if (
+        !backGroundIndices.includes(randomIndex) &&
+        !backGroundIndices.includes(randomIndex - 1) &&
+        !backGroundIndices.includes(randomIndex + 1)
+      ) {
+        if(randomIndex > 0 && randomIndex < colSlice -1)
+          backGroundIndices.push(randomIndex);
+      }
+    }
+
+    // Set the background color at the selected indices
+    backGroundIndices.forEach(index => {
+      rowColors[index] = backGround;
+    });
+
+    // Draw the row
+    for (let col = 0; col < colSlice; col++) {
+      ctx.fillStyle = rowColors[col];
+      ctx.fillRect(col * boxSize, row * boxSize, boxSize, boxSize);
+    }
   }
 
   return canvas.toBuffer();
 }
+
+
 
 module.exports = {
   signupUser,
@@ -401,5 +448,6 @@ module.exports = {
   resetPasswordRequest,
   verifyPasswordOtp,
   newPassword,
-  resendPasswordOTP
+  resendPasswordOTP,
+  testRadomImge
 };

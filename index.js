@@ -29,7 +29,6 @@ const upload = multer({storage:storage})
 const server = http.createServer(app);
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // app.use(express.static("uploads"));
-console.log(path.join(__dirname, 'uploads'))
 app.use(cors());
 app.use(express.json());
 
@@ -45,6 +44,9 @@ const userRoutes = require("./routes/userRoutes");
 app.use("/user", userRoutes);
 const typingRoutes = require("./routes/typingRoutes");
 app.use("/typing", typingRoutes);
+
+// var {testRadomImge} = require("./controllers/authController")
+// testRadomImge();
 
 
 app.use("/", (req, res) => {
