@@ -15,7 +15,7 @@
 
 #my files
 .env-example
-firebasePentivia.json
+/firebasePentivia.json
 
 # misc
 .DS_Store
