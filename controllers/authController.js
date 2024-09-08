@@ -300,15 +300,17 @@ const resendPasswordOTP = async (req, res) => {
 const setFcmToken = async (req, res) => {
   try {
     const { userid, fcmtoken } = req.body;
+    console.log("fcmtoken: ", fcmtoken)
     const user = await User.findById(userid);
 
     if (!user) {
       sendRes(res, 400, false, "User Not Found");
+      return;
     }
 
     if (!user.fcmtoken.includes(fcmtoken)) {
       await user.updateOne({
-        $push: { fcmtoken },
+        fcmtoken: [fcmtoken],
       });
     }
 
@@ -323,8 +325,12 @@ const deleteFcmToken = async (req, res) => {
     const { userid, fcmtoken } = req.body;
     const user = await User.findById(userid);
 
+    console.log("userid: ", userid);
+    console.log("fcmtoken: ", fcmtoken);
+    console.log("user: ", user);
     if (!user) {
       sendRes(res, 400, false, "User Not Found");
+      return;
     }
 
     if (user.fcmtoken.includes(fcmtoken)) {

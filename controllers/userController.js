@@ -3,6 +3,8 @@ const User = require("../models/userModel");
 require('dotenv').config();
 const OtpPass = require("../models/otpPassModel");
 const {tryCatch, error, validateUser} = require("../helpers/otherHelpers")
+const fs = require("fs")
+const path = require("path")
 
 
 const nodemailer = require("nodemailer");
@@ -284,6 +286,80 @@ const deleteUserByUsername = async (req, res) => {
     }
   }
 
+  async function updateProfile(req, res){
+    try{
+      var {username, bio, requestNotifications, chatNotifications, requestAnnouncements, updateNotifications, userid} = req.body;
+      var user = await User.findById(userid);
+      if(!user){
+        sendRes(res, 400, false, "User not found");
+      }
+      var body = req.body;
+      if(requestNotifications){
+        requestNotifications = true;
+        body["requestNotifications"]  = true; 
+      }else{
+        requestNotifications = false;
+        body["requestNotifications"] = false;
+      }
+      if(chatNotifications){
+        chatNotifications = true;
+        body["chatNotifications"]  = true; 
+      }else{
+        chatNotifications = false;
+        body["chatNotifications"] = false;
+      }
+      if(updateNotifications){
+        updateNotifications = true;
+        body["updateNotifications"]  = true; 
+      }else{
+        updateNotifications = false;
+        body["updateNotifications"] = false;
+      }
+      if(requestAnnouncements){
+        requestAnnouncements = true;
+        body["requestAnnouncements"]  = true; 
+      }else{
+        requestAnnouncements = false;
+        body["requestAnnouncements"] = false;
+      }
+      await user.updateOne({
+        username,
+        bio,
+        requestNotifications,
+        chatNotifications,
+        requestAnnouncements,
+        updateNotifications
+      })
+      if (req.file) {
+        var randomName = (bytes = 32) => crypto.randomBytes(bytes).toString("hex");
+        var fileName = randomName();
+        const specificFileName = fileName+"."+req.file.originalname.split(".")[req.file.originalname.split(".").length - 1];
+        const filePath = path.join(__dirname, '../uploads/profilePictures/', specificFileName);
+
+        // Save the file manually
+        fs.writeFile(filePath, req.file.buffer, async (err) => {
+            if (err) {
+                sendRes(res, 500, false, "unable to upload image")
+                return;
+            }
+            var saveFileName = `profilePictures/${specificFileName}`
+            body["profilePic"] = `${req.protocol}://${req.get('host')}/uploads/${saveFileName}`;
+            await user.updateOne({
+              profilePic: saveFileName
+            })
+            sendRes(res, 200, true, req.body)
+            return;
+        });
+      }
+      if(req.file){
+        return;
+      }
+      sendRes(res, 200, true, req.body);
+    }catch(error){
+      sendRes(res, 200, false, error.message)
+    }
+  }
+
 module.exports = {
     getProfilePic,
     setProfilePic,
@@ -295,5 +371,6 @@ module.exports = {
     getAllUsers,
     getUserProfile,
     setTestStarted,
-    setTestEnded
+    setTestEnded,
+    updateProfile
 };

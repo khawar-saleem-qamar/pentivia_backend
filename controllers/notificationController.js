@@ -6,7 +6,7 @@ const axios = require("axios")
 require("dotenv").config();
 
 const SCOPES = ['https://www.googleapis.com/auth/firebase.messaging'];
-const serviceAccount = require("../firebaseImfact.json");
+const serviceAccount = require("../firebasePentivia.json");
 
 admin.initializeApp({
     credential: admin.credential.cert(serviceAccount)

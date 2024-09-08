@@ -37,7 +37,25 @@ const userSchema = new mongoose.Schema({
   fcmtoken: [{ type: String, default: [] }],
   testStarted: {type: Number, default: 0},
   testEnded: {type: Number, default: 0},
-  typedSeconds: {type: Number, default: 0}
+  bio: { type: String, default: "" },
+  typedSeconds: {type: Number, default: 0},
+
+  requestNotifications: {
+    type: Boolean,
+    default: true
+  },
+  chatNotifications: {
+    type: Boolean,
+    default: true
+  },
+  requestAnnouncements: {
+    type: Boolean,
+    default: true
+  },
+  updateNotifications: {
+    type: Boolean,
+    default: true
+  }
   // appleId: { type: String },
   // about: { type: String, default: "" },
   // profilePicture: { type: String, default: "" },

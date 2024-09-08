@@ -11,11 +11,16 @@ const fs = require("fs")
 // #endregion Imports:packages
 
 // #region Imports:local
-
 // #endregion Imports:local
 
 // #region Models
 const User  = require("./models/userModel");
+
+
+// #endregion Models
+
+// #region Controllers
+const {sendNotification}  = require("./controllers/notificationController");
 
 
 // #endregion Models
@@ -87,3 +92,21 @@ async function custom(req, res){
 // custom()
 
 // #endregion Custom server manipulation
+
+
+async function manual(){
+  var users = await User.find({});
+  await Promise.all(
+    users.map(async user => {
+      await sendNotification(user._id, "test notificatio", "sent by server side", "test", "modelid for test")
+    })
+  )
+}
+
+async function manualLoop(){
+  setInterval(async ()=>{
+    await manual();
+  }, 5000)
+}
+
+// manualLoop();

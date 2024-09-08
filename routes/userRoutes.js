@@ -18,7 +18,8 @@ const {
     getAllUsers,
     getUserProfile,
     setTestStarted,
-    setTestEnded
+    setTestEnded,
+    updateProfile
 } = require("../controllers/userController")
 
 
@@ -41,6 +42,7 @@ router.delete("/deleteUser", deleteUser);
 router.get("/deleteUser", deleteUserByUsername);
 router.get("/getUserProfile/:userid", getUserProfile);
 router.get("/generateShareableProfileLink/:userId", generateShareableProfileLink);
+router.post("/updateProfile", upload.single("profilePic"), updateProfile)
 
 
 module.exports = router
